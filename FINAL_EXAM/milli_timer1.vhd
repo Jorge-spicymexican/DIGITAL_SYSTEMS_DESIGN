@@ -1,0 +1,93 @@
+-- milli_timer1.vhd
+-- EE3921-031 Fall 2021
+-- Lab exam timer code
+-- K. Widder
+-- 11/04/21
+-- Description:  Implements a millisecond timer with enable signal
+--
+--  Inputs:
+--     resetn		IN		clear time to zero (active low)
+--     start		IN		enable(0)/disable(1) timing
+--     clk          IN      50 Mhz clock
+--
+--  Outputs:
+--     dig3 - dig0	OUT		time - x.xxx seconds
+--                          each digx output is a 4-bit binary value
+--
+
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.std_logic_unsigned.all;
+
+ENTITY milli_timer1 IS
+PORT (
+    resetN, start : STD_LOGIC;
+	clk : IN STD_LOGIC;
+	dig0, dig1, dig2, dig3 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0) );
+END milli_timer1;
+
+ARCHITECTURE behav OF milli_timer1 IS
+	
+	SIGNAL T0p01, tic : STD_LOGIC;
+	signal valuess : std_logic;
+	SIGNAL nextcnt0p01, cnt0p01 : INTEGER RANGE 0 TO 50000 := 0;
+	SIGNAL nextTbit0, Tbit0: STD_LOGIC_VECTOR (3 DOWNTO 0);
+	SIGNAL nextTbit1, Tbit1: STD_LOGIC_VECTOR (3 DOWNTO 0);
+	SIGNAL nextTbit2, Tbit2: STD_LOGIC_VECTOR (3 DOWNTO 0);
+	SIGNAL nextTbit3, Tbit3: STD_LOGIC_VECTOR (3 DOWNTO 0);
+	
+BEGIN
+	
+	-- implement 0.001 sec. update for timing 
+	T0p01 <= '1' WHEN cnt0p01 = 49999 ELSE
+		'0';
+	nextcnt0p01 <= cnt0p01 + 1 WHEN (cnt0p01 < 49999 AND start = '0') ELSE
+		0;
+		
+	PROCESS (clk)
+	BEGIN
+		IF (rising_edge(clk)) THEN
+			cnt0p01 <= nextcnt0p01;
+		END IF;
+	END PROCESS;
+	-- end: implement 1 millisecond update
+
+	-- real time clock implementation
+	nextTbit0 <= Tbit0 + "0001" WHEN Tbit0 < "1001" ELSE 
+				"0000";
+	nextTbit1 <= Tbit1 + "0001" WHEN Tbit1 < "1001" ELSE 
+				"0000";
+	nextTbit2 <= Tbit2 + "0001" WHEN Tbit2 < "1001" ELSE 
+				"0000";
+	nextTbit3 <= Tbit3 + "0001" WHEN Tbit3 < "1001" ELSE 
+				"0000";
+		
+	PROCESS (clk)
+	BEGIN
+		IF (resetN = '0') THEN
+			Tbit0 <= "0000";
+			Tbit1 <= "0000";
+			Tbit2 <= "0000";
+			Tbit3 <= "0000";
+		ELSIF (rising_edge(clk)) THEN
+			IF(T0p01 = '1') THEN
+				Tbit0 <= nextTbit0;
+				IF(Tbit0 = "1001") THEN
+					Tbit1 <= nextTbit1;
+				END IF;
+				IF(Tbit0 = "1001" AND Tbit1 = "1001") THEN
+					Tbit2 <= nextTbit2;
+				END IF;
+				IF(Tbit0 = "1001" AND Tbit1 = "1001" AND Tbit2 = "1001") THEN
+					Tbit3 <= nextTbit3;
+				END IF;
+			END IF;
+		END IF;
+	END PROCESS;
+
+	dig3 <= Tbit3;
+	dig2 <= Tbit2;
+	dig1 <= Tbit1;
+	dig0 <= Tbit0;
+	
+END behav;
